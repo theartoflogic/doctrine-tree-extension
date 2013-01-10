@@ -9,7 +9,7 @@
         "extensions",
         "tree",
         "nestedset",
-        "closure",
+        "closure"
     ],
     "homepage": "http://theartoflogic.com",
     "license": "MIT",
