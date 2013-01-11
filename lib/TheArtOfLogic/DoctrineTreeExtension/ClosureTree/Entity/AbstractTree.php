@@ -22,29 +22,21 @@ abstract class AbstractTree
     protected $descendant;
 
     /**
-     * @ORM\Column(type="integer", length=3, options={"unsigned"=true})
+     * @ORM\Column(type="smallint", length=5, options={"unsigned"=true})
      */
-    private $depth;
-
-    /**
-     * Get id
-     *
-     * @return integer
-     */
-    public function getId()
-    {
-        return $this->id;
-    }
+    protected $depth;
 
     /**
      * Set ancestor
      *
      * @param object $ancestor
+     * 
      * @return AbstractTree
      */
     public function setAncestor($ancestor)
     {
         $this->ancestor = $ancestor;
+
         return $this;
     }
 
@@ -62,11 +54,13 @@ abstract class AbstractTree
      * Set descendant
      *
      * @param object $descendant
+     * 
      * @return AbstractTree
      */
     public function setDescendant($descendant)
     {
         $this->descendant = $descendant;
+
         return $this;
     }
 
@@ -84,11 +78,13 @@ abstract class AbstractTree
      * Set depth
      *
      * @param integer $depth
+     * 
      * @return AbstractTree
      */
     public function setDepth($depth)
     {
         $this->depth = $depth;
+
         return $this;
     }
 
