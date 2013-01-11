@@ -90,4 +90,8 @@ class EventSubscriber implements BaseEventSubscriber
         $em = $eventArgs->getEntityManager();
         $uow = $em->getUnitOfWork();
     }
+
+    public function preFlush()
+    {
+    }
 }
