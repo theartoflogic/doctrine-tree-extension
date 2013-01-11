@@ -94,4 +94,8 @@ class EventSubscriber implements BaseEventSubscriber
     public function preFlush()
     {
     }
+
+    public function postFlush()
+    {
+    }
 }
