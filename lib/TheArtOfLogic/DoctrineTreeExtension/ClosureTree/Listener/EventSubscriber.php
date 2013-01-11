@@ -53,6 +53,8 @@ class EventSubscriber implements BaseEventSubscriber
     public function loadClassMetadata(EventArgs $eventArgs)
     {
         $classMetadata = $eventArgs->getClassMetadata();
+
+
     }
 
     public function postLoad(EventArgs $eventArgs)
@@ -64,6 +66,14 @@ class EventSubscriber implements BaseEventSubscriber
     }
 
     public function postPersist(EventArgs $eventArgs)
+    {
+    }
+
+    public function preUpdate(EventArgs $eventArgs)
+    {
+    }
+
+    public function postUpdate(EventArgs $eventArgs)
     {
     }
 

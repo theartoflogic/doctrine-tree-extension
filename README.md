@@ -1,4 +1,4 @@
-doctrine-tree-extension
+Doctrine Tree Extension
 =======================
 
-Adds tree behaviors to your doctrine entities.
+Adds tree behaviors to Doctrine entities.

@@ -6,8 +6,8 @@ use Doctrine\Common\Annotations\Annotation;
 
 /**
  * @Annotation
- * @Target("PROPERTY")
+ * @Target("CLASS")
  */
-class Parent
+class Node
 {
 }
