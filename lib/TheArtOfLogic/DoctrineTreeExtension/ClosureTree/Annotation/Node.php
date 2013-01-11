@@ -10,4 +10,17 @@ use Doctrine\Common\Annotations\Annotation;
  */
 class Node
 {
+    /**
+     * Specifies the name of the table to use for the tree data.
+     *
+     * @var string
+     */
+    public $treeTable;
+
+    /**
+     * Specifies the entity to use for the tree data.
+     *
+     * @var string
+     */
+    public $treeEntity;
 }
