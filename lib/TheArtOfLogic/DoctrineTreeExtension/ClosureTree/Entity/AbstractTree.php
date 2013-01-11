@@ -11,18 +11,18 @@ abstract class AbstractTree
 {
     /**
      * @ORM\Id
-     * @ORM\Column(type="integer", length=10, options={unsigned=true})
+     * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
      */
     protected $ancestor;
 
     /**
      * @ORM\Id
-     * @ORM\Column(type="integer", length=10, options={unsigned=true})
+     * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
      */
     protected $descendant;
 
     /**
-     * @ORM\Column(type="integer", length=3, options={unsigned=true})
+     * @ORM\Column(type="integer", length=3, options={"unsigned"=true})
      */
     private $depth;
 
