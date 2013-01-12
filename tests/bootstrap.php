@@ -1,26 +1,23 @@
 <?php
 
-/**
- * Basic PSR-0 autoloader, except that it always loads from the ../lib directory.
- * 
- * @see https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md
- */
-function autoload($className)
-{
-    $className = ltrim($className, '\\');
-    $fileName  = '';
-    $namespace = '';
+use Doctrine\Common\Annotations\AnnotationRegistry;
+use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\Common\Annotations\CachedReader;
+use Doctrine\Common\Cache\ArrayCache;
 
-    if ($lastNsPos = strrpos($className, '\\')) {
-        $namespace = substr($className, 0, $lastNsPos);
-        $className = substr($className, $lastNsPos + 1);
-        $fileName  = str_replace('\\', DIRECTORY_SEPARATOR, $namespace) . DIRECTORY_SEPARATOR;
-    }
+// Load the default autoloader
+$loader = require __DIR__ .'/../vendor/autoload.php';
 
-    $fileName .= str_replace('_', DIRECTORY_SEPARATOR, $className) . '.php';
+// Add test namespace to the loader
+$loader->add('TheArtOfLogic\DoctrineTreeExtensionTest', __DIR__);
 
-    // Always load classes from the ../lib directory
-    $filePath = __DIR__ .'/../lib/'. $fileName;
+// Register default doctrine annotations
+AnnotationRegistry::registerLoader(array($loader, 'loadClass'));
 
-    require $filePath;
-}
+// Register custom annotations
+TheArtOfLogic\DoctrineTreeExtension\Annotation\Loader::registerAnnotations();
+
+// Initialize the global annotation reader
+$annotationReader = new AnnotationReader();
+$annotationReader = new CachedReader($annotationReader, new ArrayCache());
+$GLOBALS['annotationReader'] = $annotationReader;

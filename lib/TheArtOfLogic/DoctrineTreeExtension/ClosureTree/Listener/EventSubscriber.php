@@ -2,48 +2,21 @@
 
 namespace TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Listener;
 
-use Doctrine\Common\Annotations\Reader;
-use Doctrine\Common\EventSubscriber as BaseEventSubscriber;
-use Doctrine\Common\EventArgs;
-use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
-use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Event\PreUpdateEventArgs;
-use Doctrine\ORM\Event\OnFlushEventArgs;
-use Doctrine\ORM\Event\PreFlushEventArgs;
-use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\UnitOfWork;
+use TheArtOfLogic\DoctrineTreeExtension\Listener\EventSubscriber as BaseEventSubscriber;
 
 /**
  * @author Sarah Ryan <sryan@phunware.com>
  */
-class EventSubscriber implements BaseEventSubscriber
+class EventSubscriber extends BaseEventSubscriber
 {
-    const NODE_CLASS = 'TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Node';
-    const NODE_PARENT_CLASS = 'TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\NodeParent';
-
     /**
-     * An instance of the {@link Reader} class used to read the annotations.
-     *
-     * @var Reader
+     * {@inheritdoc}
      */
-    protected $reader;
-
-    /**
-     * Holds the list of classes that are specified as closure tree nodes.
-     *
-     * @var array
-     */
-    protected $nodeClasses = array();
-
-    /**
-     * Set the annotation reader.
-     *
-     * @param Reader $reader The annotation reader.
-     */
-    public function setAnnotationReader(Reader $reader)
+    protected function getNodeClass()
     {
-        $this->reader = $reader;
-
-        return $this;
+        return 'TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Node';
     }
 
     /**
@@ -53,108 +26,75 @@ class EventSubscriber implements BaseEventSubscriber
     {
         return array(
             'loadClassMetadata',
-            'postLoad',
-            'prePersist',
-            'postPersist',
-            'preUpdate',
-            'postUpdate',
-            'preRemove',
-            'postRemove',
-            'onFlush',
-            'preFlush',
-            'postFlush'
+            'onFlush'
         );
     }
 
     /**
-     * Check whether the specified class is a node.
-     *
-     * @param string $className
-     *
-     * @return boolean Returns true if the class is a node, otherwise returns false.
+     * {@inheritdoc}
      */
-    public function isNode($className)
+    protected function processScheduledEntityInsertion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
     {
-        return in_array($className, $this->nodeClasses);
+        // Get the metadata
+        $data = $this->getNodeData($entity);
+
+        // Get the table name
+        $treeTableName = $data['annotation']->treeTable;
+
+        // Get the ID field anme
+        $idFieldName
+
+        // Check if the entity has a parent
+        if ($parent = $entity->getParent()) {
+
+            // Get the parent ID
+            $parentId = (int)$parent->getId();
+
+            // Format the query to insert the tree hierarchy
+            $sql = '
+                INSERT INTO
+                    '. $treeTableName .'
+                    (ancestor, descendant, depth)
+                SELECT
+                    ancestor, '. $id .', (depth + 1)
+                FROM
+                    '. $treeTableName .'
+                WHERE
+                    descendant = ?
+                UNION ALL SELECT '. $id .', '. $id .', 0
+            ';
+
+            $query = $entityManager->createNativeQuery($sql)
+                ->setParameter(1, $parentId);
+
+        } else {
+
+            // Format the query to insert the tree hierarchy
+            $sql = 'INSERT INTO '. $table .' SET ancestor = ?, descendant = ?';
+
+            // Get the query
+            $query = $entityManager->createNativeQuery($sql)
+                ->setParameter(1, $id)
+                ->setParameter(2, $id);
+        }
+
+        // Execute the query
+        $query->getResult();
     }
 
     /**
-     * Track whether the class is a node.
-     *
-     * @param LoadClassMetadataEventArgs $eventArgs
+     * {@inheritdoc}
      */
-    public function loadClassMetadata(LoadClassMetadataEventArgs $eventArgs)
+    protected function processScheduledEntityUpdate(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
     {
-        // Get the class metadata
-        $metadata = $eventArgs->getClassMetadata();
 
-        // Get the class name
-        $className = $metadata->getName();
-
-        // Get the class annotations
-        $annotations = $this->reader->getClassAnnotations(new \ReflectionClass($className));
-
-        // Check if the entity uses the closure tree annotation
-        foreach ($annotations as $annotation) {
-            if ($annotation instanceof self::NODE_CLASS) {
-                
-                // Store the class in the list of closure tree nodes
-                $this->nodeClasses[] = $className;
-
-            }
-        }
     }
 
-    public function postLoad(EventArgs $eventArgs)
+    /**
+     * {@inheritdoc}
+     */
+    protected function processScheduledEntityDeletion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
     {
-    }
 
-    public function prePersist(LifecycleEventArgs $eventArgs)
-    {
-    }
-
-    public function postPersist(EventArgs $eventArgs)
-    {
-    }
-
-    public function preUpdate(PreUpdateEventArgs $eventArgs)
-    {
-    }
-
-    public function postUpdate(EventArgs $eventArgs)
-    {
-    }
-
-    public function preRemove(EventArgs $eventArgs)
-    {
-    }
-
-    public function postRemove(EventArgs $eventArgs)
-    {
-    }
-
-    public function onFlush(OnFlushEventArgs $eventArgs)
-    {
-        // Get the class metadata
-        $metadata = $eventArgs->getClassMetadata();
-
-        // Get the class name
-        $className = $metadata->getName();
-
-        // Check if the class is a node
-        if ($this->isNode($className)) {
-
-            $em = $eventArgs->getEntityManager();
-            $uow = $em->getUnitOfWork();
-
-        }
-    }
-
-    public function preFlush(PreFlushEventArgs $eventArgs)
-    {
-    }
-
-    public function postFlush(PostFlushEventArgs $eventArgs)
-    {
     }
 }

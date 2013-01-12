@@ -71,8 +71,8 @@ class EntityRepository extends BaseEntityRepository
 
         $queryBuilder
             ->select('node')
-            ->from($meta->name, 'node');
-            ->innerJoin('')
+            ->from($meta->name, 'node')
+            ->innerJoin('');
 
         // Get the name of the parent field
         $parentField = $meta->associationMappings['parent']['fieldName'];

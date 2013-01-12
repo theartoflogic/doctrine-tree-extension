@@ -11,19 +11,25 @@
         "nestedset",
         "closure"
     ],
-    "homepage": "http://theartoflogic.com",
     "license": "MIT",
     "authors": [
         {
             "name": "Sarah Ryan",
-            "email": "sarah@theartoflogic.com"
+            "email": "sarah@theartoflogic.com",
+            "homepage": "http://theartoflogic.com"
         }
     ],
     "require": {
         "php": ">=5.3.2",
-        "doctrine/common": ">=2.2,<2.5-dev"
+        "doctrine/common": "dev-master"
+    },
+    "require-dev": {
+        "symfony/config": "dev-master",
+        "symfony/http-kernel": "dev-master",
+        "doctrine/orm": "dev-master"
     },
     "autoload": {
         "psr-0": { "TheArtOfLogic\\DoctrineTreeExtension": "lib/" }
-    }
+    },
+    "minimum-stability": "dev"
 }
