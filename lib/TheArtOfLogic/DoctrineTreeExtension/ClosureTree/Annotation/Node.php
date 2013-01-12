@@ -15,14 +15,28 @@ class Node
      *
      * @var string
      */
-    public $treeEntity;
+    public $entity;
     
     /**
      * Specifies the name of the table to use for the tree data.
      *
      * @var string
      */
-    public $treeTable;
+    public $table;
+    
+    /**
+     * Specifies the name of the column to use for the ancestor.
+     *
+     * @var string
+     */
+    public $ancestorColumn;
+    
+    /**
+     * Specifies the name of the column to use for the descendant.
+     *
+     * @var string
+     */
+    public $descendantColumn;
     
     /**
      * Specifies whether to use the depth field.

@@ -31,6 +31,55 @@ class EventSubscriber extends BaseEventSubscriber
     }
 
     /**
+     * Track whether the class is a node.
+     *
+     * @param LoadClassMetadataEventArgs $eventArgs
+     */
+    public function loadClassMetadata(LoadClassMetadataEventArgs $eventArgs)
+    {
+        // Call the parent method and check if we got data
+        if ($data = parent::loadClassMetadata($eventArgs)) {
+
+            // Split up the data into variables
+            list($className, $metadata, $treeNodeAnnotation) = $data;
+
+            // Check if we should get the tree details from another entity
+            if ($treeAnnotation->entity) {
+
+            } else {
+
+                // Check if the treeTable was specified
+                if (!$treeNodeAnnotation->table) {
+                    $treeNodeAnnotation->table = $metadata['table']['name'] .'_tree';
+                }
+
+                // Check if the ancestorColumn was specified
+                if (!$treeNodeAnnotation->ancestorColumn) {
+                    $treeNodeAnnotation->ancestorColumn = 'ancestor';
+                }
+
+                // Check if the ancestorColumn was specified
+                if (!$treeNodeAnnotation->descendantColumn) {
+                    $treeNodeAnnotation->descendantColumn = 'descendant';
+                }
+
+                // Check if the withDepth parameter was specified
+                if (is_null($treeNodeAnnotation->withDepth)) {
+                    $treeNodeAnnotation->withDepth = true;
+                }
+
+            }
+
+            // Set the node data
+            $this->nodeData[$className] = array(
+                'metadata' => $metadata,
+                'annotation' => $treeNodeAnnotation
+            );
+
+        }
+    }
+
+    /**
      * {@inheritdoc}
      */
     protected function processScheduledEntityInsertion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
@@ -42,7 +91,7 @@ class EventSubscriber extends BaseEventSubscriber
         $treeTableName = $data['annotation']->treeTable;
 
         // Get the ID field anme
-        $idFieldName
+        $id
 
         // Check if the entity has a parent
         if ($parent = $entity->getParent()) {

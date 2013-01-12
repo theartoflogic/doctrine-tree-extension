@@ -113,14 +113,14 @@ abstract class EventSubscriber implements BaseEventSubscriber
         // Check if the entity uses the closure tree annotation
         foreach ($annotations as $annotation) {
             if ($annotation instanceof $nodeClass) {
-                
-                // Store the annotations for the node entity
-                $this->nodeData[$className] = array(
-                    'metadata' => $metadata,
-                    'annotation' => $annotation
+
+                // Return the node data
+                return array(
+                    'className'             => $className,
+                    'metadata'              => $metadata,
+                    'treeNodeAnnotation'    => $annotation
                 );
 
-                break;
             }
         }
     }
