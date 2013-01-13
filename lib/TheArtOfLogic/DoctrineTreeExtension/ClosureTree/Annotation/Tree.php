@@ -8,12 +8,12 @@ use Doctrine\Common\Annotations\Annotation;
  * @Annotation
  * @Target("CLASS")
  */
-class Node
+class Tree
 {
     /**
-     * Specifies the entity to use for the tree data.
+     * Specifies the entity to use for the node data.
      *
      * @var string
      */
-    public $treeEntity;
+    public $nodeEntity;
 }

@@ -2,9 +2,19 @@
 
 namespace TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Listener;
 
+use Doctrine\Common\EventArgs;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\UnitOfWork;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Event\LifecycleEventArgs;
+use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 use TheArtOfLogic\DoctrineTreeExtension\Listener\EventSubscriber as BaseEventSubscriber;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Tree;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Node;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\NodeParent;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Ancestor;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Descendant;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Depth;
 
 /**
  * @author Sarah Ryan <sryan@phunware.com>
@@ -14,19 +24,12 @@ class EventSubscriber extends BaseEventSubscriber
     /**
      * {@inheritdoc}
      */
-    protected function getNodeClass()
-    {
-        return 'TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Node';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getSubscribedEvents()
     {
         return array(
             'loadClassMetadata',
-            'onFlush'
+            'onFlush',
+            'postPersist'
         );
     }
 
@@ -37,98 +40,194 @@ class EventSubscriber extends BaseEventSubscriber
      */
     public function loadClassMetadata(LoadClassMetadataEventArgs $eventArgs)
     {
-        // Call the parent method and check if we got data
-        if ($data = parent::loadClassMetadata($eventArgs)) {
+        // Get the class metadata
+        $metadata = $eventArgs->getClassMetadata();
 
-            // Split up the data into variables
-            list($className, $metadata, $treeNodeAnnotation) = $data;
+        // Get the class annotations
+        $annotations = $this->reader->getClassAnnotations($metadata->getReflectionClass());
 
-            // Check if we should get the tree details from another entity
-            if ($treeAnnotation->entity) {
+        // Check if the entity has the closure tree annotation
+        foreach ($annotations as $annotation) {
+            if ($annotation instanceof Node) {
 
-            } else {
+                // Process the node metadata
+                $this->processNode($eventArgs, $metadata, $annotation);
 
-                // Check if the treeTable was specified
-                if (!$treeNodeAnnotation->table) {
-                    $treeNodeAnnotation->table = $metadata['table']['name'] .'_tree';
-                }
+                break;
+            } elseif ($annotation instanceof Tree) {
 
-                // Check if the ancestorColumn was specified
-                if (!$treeNodeAnnotation->ancestorColumn) {
-                    $treeNodeAnnotation->ancestorColumn = 'ancestor';
-                }
+                // Process the tree metadata
+                $this->processNodeTree($eventArgs, $metadata, $annotation);
 
-                // Check if the ancestorColumn was specified
-                if (!$treeNodeAnnotation->descendantColumn) {
-                    $treeNodeAnnotation->descendantColumn = 'descendant';
-                }
-
-                // Check if the withDepth parameter was specified
-                if (is_null($treeNodeAnnotation->withDepth)) {
-                    $treeNodeAnnotation->withDepth = true;
-                }
-
+                break;
             }
-
-            // Set the node data
-            $this->nodeData[$className] = array(
-                'metadata' => $metadata,
-                'annotation' => $treeNodeAnnotation
-            );
-
         }
+    }
+
+    /**
+     * Process the node metadata.
+     *
+     * @param LoadClassMetadataEventArgs $eventArgs
+     * @param ClassMetadata $metadata
+     * @param Node $annotation
+     */
+    protected function processNode(LoadClassMetadataEventArgs $eventArgs, ClassMetadata $metadata, Node $annotation)
+    {
+        $className = $metadata->name;
+
+        // Holds the closure tree data
+        $closureTreeData = array();
+
+        // Check if we should either use the default entity or prepend the node namespace
+        if (!$annotation->treeEntity) {
+            $closureTreeData['treeEntity'] = $className .'Tree';
+        } elseif(strpos($annotation->treeEntity, '\\') === false) {
+            $closureTreeData['treeEntity'] = $metadata->namespace .'\\'. $annotation->treeEntity;
+        }
+
+        // Loop through the properties and find the parent column
+        foreach ($metadata->getAssociationMappings() as $propertyName => $propertyData) {
+
+            $propertyAnnotations = $this->reader->getPropertyAnnotations(new \ReflectionProperty($className, $propertyName));
+
+            // Check if this property has the node parent annotation
+            foreach ($propertyAnnotations as $propertyAnnotation) {
+                if ($propertyAnnotation instanceof NodeParent) {
+
+                    // Set the parent data
+                    $closureTreeData['parent'] = $propertyData;
+
+                    break 2;
+                }
+            }
+        }
+
+        // Make sure a parent was specified
+        if (!isset($closureTreeData['parent'])) {
+            throw new \Exception('You must define a parent column for the closure tree entity '. $className .'.');
+        }
+
+        // Set the closure tree data
+        $metadata->closureTree = $closureTreeData;
+    }
+
+    /**
+     * Process the node tree metadata.
+     *
+     * @param LoadClassMetadataEventArgs $eventArgs
+     * @param ClassMetadata $metadata
+     * @param Tree $annotation
+     */
+    protected function processNodeTree(LoadClassMetadataEventArgs $eventArgs, ClassMetadata $metadata, Tree $annotation)
+    {
+        $className = $metadata->name;
+
+        // Holds the closure tree data
+        $closureTreeData = array();
+
+        // Check if we should either use the default entity or use the tree name without the 'Tree' suffix
+        if (!$annotation->nodeEntity) {
+            $closureTreeData['nodeEntity'] = substr($className, 0, -4);
+        } elseif(strpos($annotation->nodeEntity, '\\') === false) {
+            $closureTreeData['nodeEntity'] = $metadata->namespace .'\\'. $annotation->nodeEntity;
+        }
+
+        // Initialize the depth parameter
+        $closureTreeData['depth'] = false;
+
+        // Loop through the properties and find the parent column
+        foreach ($metadata->fieldMappings as $propertyName => $propertyData) {
+
+            $propertyAnnotations = $this->reader->getPropertyAnnotations(new \ReflectionProperty($className, $propertyName));
+
+            // Check if this property has the node parent annotation
+            foreach ($propertyAnnotations as $propertyAnnotation) {
+                if ($propertyAnnotation instanceof Ancestor) {
+
+                    // Set the parent data
+                    $closureTreeData['ancestor'] = $propertyData;
+
+                    break 2;
+                } elseif ($propertyAnnotation instanceof Descendant) {
+
+                    // Set the parent data
+                    $closureTreeData['descendant'] = $propertyData;
+
+                    break 2;
+                } elseif ($propertyAnnotation instanceof Depth) {
+
+                    // Set the parent data
+                    $closureTreeData['depth'] = $propertyData;
+
+                    break 2;
+                }
+            }
+        }
+
+        // Set the closure tree data
+        $metadata->closureTree = $closureTreeData;
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function processScheduledEntityInsertion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
+    public function postPersist(LifecycleEventArgs $eventArgs)
     {
-        // Get the metadata
-        $data = $this->getNodeData($entity);
+        $entity = $eventArgs->getEntity();
+        $entityManager = $eventArgs->getEntityManager();
+        $nodeClass = get_class($entity);
+
+        // Get node data
+        $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
+
+        // Get tree node data
+        $treeMetadata = $entityManager->getClassMetadata($nodeMetadata->closureTree['treeEntity']);
 
         // Get the table name
-        $treeTableName = $data['annotation']->treeTable;
-
-        // Get the ID field anme
-        $id
+        $tableName = $treeMetadata->getTableName();
+        $idColumn = $nodeMetadata->getSingleIdentifierFieldName();
+        $parentColumn = $nodeMetadata->closureTree['parent']['fieldName'];
+        $nodeId = $nodeMetadata->getReflectionProperty($idColumn)->getValue($entity);
+        $parentId = $nodeMetadata->getReflectionProperty($parentColumn)->getValue($entity);
 
         // Check if the entity has a parent
-        if ($parent = $entity->getParent()) {
-
-            // Get the parent ID
-            $parentId = (int)$parent->getId();
+        if ($parentId) {
 
             // Format the query to insert the tree hierarchy
-            $sql = '
-                INSERT INTO
-                    '. $treeTableName .'
-                    (ancestor, descendant, depth)
-                SELECT
-                    ancestor, '. $id .', (depth + 1)
-                FROM
-                    '. $treeTableName .'
-                WHERE
-                    descendant = ?
-                UNION ALL SELECT '. $id .', '. $id .', 0
-            ';
+            $query = 'INSERT INTO '. $tableName .' (ancestor, descendant';
+            if ($data['annotation']->withDepth) {
+                $query .= ', '. $data['annotation']->depthColumn;
+            }
+            $query .= ') SELECT ancestor, '. $identifier .' ';
+            if ($data['annotation']->withDepth) {
+                $query .= ', ('. $data['annotation']->depthColumn .' + 1) ';
+            }
+            $query .= 'FROM '. $tableName .' ';
+            $query .= 'WHERE descendant = ? ';
+            $query .= 'UNION ALL SELECT '. $nodeId .', '. $nodeId;
+            if ($data['annotation']->withDepth) {
+                $query .= ', 0';
+            }
 
-            $query = $entityManager->createNativeQuery($sql)
-                ->setParameter(1, $parentId);
+            // Set the query parameters
+            $queryParams = array($parentId);
 
         } else {
 
             // Format the query to insert the tree hierarchy
-            $sql = 'INSERT INTO '. $table .' SET ancestor = ?, descendant = ?';
+            $query = 'INSERT INTO '. $tableName .' ('. $treeMetadata->closureTree['ancestor']['fieldName'] .') VALUES (?, ?';
+            if ($treeMetadata->closureTree['depth']) {
+                $query .= ', 0';
+            }
+            $query .= ')';
 
-            // Get the query
-            $query = $entityManager->createNativeQuery($sql)
-                ->setParameter(1, $id)
-                ->setParameter(2, $id);
+            // Set the query parameters
+            $queryParams = array($nodeId, $nodeId);
+
         }
 
         // Execute the query
-        $query->getResult();
+        $entityManager->getConnection()->executeQuery($query, $queryParams);
     }
 
     /**

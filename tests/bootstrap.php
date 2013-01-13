@@ -1,5 +1,9 @@
 <?php
 
+// Make sure errors are output
+error_reporting(E_ALL | E_STRICT);
+ini_set('display_errors', 1);
+
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\CachedReader;

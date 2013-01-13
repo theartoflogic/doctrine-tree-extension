@@ -39,6 +39,11 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
 
     public function setup()
     {
+        // Make sure the sqlite extension is loaded
+        if (!extension_loaded('pdo_sqlite')) {
+            throw new \Exception('You need the sqlite extension to run this test.');
+        }
+
         // Add the event subscriber
         $this->getEventManager()->addEventSubscriber($this->getEventSubscriber());
     }
@@ -67,6 +72,11 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
      * @return array Returns an array containing the list of entity classes to use.
      */
     abstract protected function getEntityClasses();
+
+    /**
+     * Populate the database with test data.
+     */
+    //abstract protected function populateData();
 
     /**
      * Get the event manager.

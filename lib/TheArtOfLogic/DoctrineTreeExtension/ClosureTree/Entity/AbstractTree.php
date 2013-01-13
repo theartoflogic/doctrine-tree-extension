@@ -3,6 +3,7 @@
 namespace TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation as ClosureTree;
 
 /**
  * @ORM\MappedSuperclass
@@ -12,19 +13,16 @@ abstract class AbstractTree
     /**
      * @ORM\Id
      * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
+     * @ClosureTree\Ancestor
      */
     protected $ancestor;
 
     /**
      * @ORM\Id
      * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
+     * @ClosureTree\Descendant
      */
     protected $descendant;
-
-    /**
-     * @ORM\Column(type="smallint", length=5, options={"unsigned"=true})
-     */
-    protected $depth;
 
     /**
      * Set ancestor
@@ -72,29 +70,5 @@ abstract class AbstractTree
     public function getDescendant()
     {
         return $this->descendant;
-    }
-
-    /**
-     * Set depth
-     *
-     * @param integer $depth
-     * 
-     * @return AbstractTree
-     */
-    public function setDepth($depth)
-    {
-        $this->depth = $depth;
-
-        return $this;
-    }
-
-    /**
-     * Get depth
-     *
-     * @return integer
-     */
-    public function getDepth()
-    {
-        return $this->depth;
     }
 }

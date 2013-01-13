@@ -8,11 +8,7 @@ use Doctrine\Common\EventArgs;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
-use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
-use Doctrine\ORM\Event\PreFlushEventArgs;
-use Doctrine\ORM\Event\PostFlushEventArgs;
 
 /**
  * @author Sarah Ryan <sryan@phunware.com>
@@ -27,18 +23,18 @@ abstract class EventSubscriber implements BaseEventSubscriber
     protected $reader;
 
     /**
-     * Holds the data for the node classes.
+     * Holds the data for the node entities.
      *
      * @var array
      */
     protected $nodeData = array();
 
     /**
-     * Get the name of the node class.
+     * Holds the data for the node tree entities.
      *
-     * @return string
+     * @var array
      */
-    abstract protected function getNodeClass();
+    protected $nodeTreeData = array();
 
     /**
      * Process the scheduled entity insertion for the specified entity.
@@ -47,7 +43,7 @@ abstract class EventSubscriber implements BaseEventSubscriber
      * @param UnitOfWork $unitOfWork
      * @param object $entity The entity to process.
      */
-    abstract protected function processScheduledEntityInsertion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
+    //abstract protected function processScheduledEntityInsertion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
 
     /**
      * Process the scheduled entity update for the specified entity.
@@ -88,79 +84,77 @@ abstract class EventSubscriber implements BaseEventSubscriber
      */
     public function isNode($entity)
     {
-        return array_key_exists(get_class($entity), $this->nodeData);
+        $className = (is_string($entity)) ? $entity : get_class($entity);
+
+        return array_key_exists($className, $this->nodeData);
     }
 
     /**
-     * Track whether the class is a node.
+     * Check whether the entity is a node tree.
      *
-     * @param LoadClassMetadataEventArgs $eventArgs
+     * @param object The entity object.
+     *
+     * @return boolean Returns true if the entity is a node tree, otherwise returns false.
      */
-    public function loadClassMetadata(LoadClassMetadataEventArgs $eventArgs)
+    public function isNodeTree($entity)
     {
-        // Get the class metadata
-        $metadata = $eventArgs->getClassMetadata();
+        $className = (is_string($entity)) ? $entity : get_class($entity);
 
-        // Get the class name
-        $className = $metadata->getName();
+        return array_key_exists($className, $this->nodeTreeData);
+    }
 
-        // Get the class annotations
-        $annotations = $this->reader->getClassAnnotations(new \ReflectionClass($className));
+    /**
+     * Get the metadata for the specified node.
+     *
+     * @param object $entity The entity object.
+     *
+     * @return ClassMetadata Returns the metadata.
+     */
+    protected function getNodeData($entity)
+    {
+        $className = (is_string($entity)) ? $entity : get_class($entity);
 
-        // Get the node class name
-        $nodeClass = $this->getNodeClass();
+        return $this->nodeData[$className];
+    }
 
-        // Check if the entity uses the closure tree annotation
-        foreach ($annotations as $annotation) {
-            if ($annotation instanceof $nodeClass) {
+    /**
+     * Get the metadata for the specified node tree.
+     *
+     * @param object $entity The entity object.
+     *
+     * @return ClassMetadata Returns the metadata.
+     */
+    protected function getNodeTreeData($entity)
+    {
+        $className = (is_string($entity)) ? $entity : get_class($entity);
 
-                // Return the node data
-                return array(
-                    'className'             => $className,
-                    'metadata'              => $metadata,
-                    'treeNodeAnnotation'    => $annotation
-                );
-
-            }
-        }
+        return $this->nodeTreeData[$className];
     }
 
     public function onFlush(OnFlushEventArgs $eventArgs)
     {
-        $em = $eventArgs->getEntityManager();
-        $uow = $em->getUnitOfWork();
+        $entityManager = $eventArgs->getEntityManager();
+        $uow = $entityManager->getUnitOfWork();
 
         // Loop through the scheduled insertions and check for tree nodes
         foreach ($uow->getScheduledEntityInsertions() AS $entity) {
             if ($this->isNode($entity)) {
-                $this->processScheduledEntityInsertion($em, $uow, $entity);
+                //$this->processScheduledEntityInsertion($entityManager, $uow, $entity);
             }
         }
 
         // Loop through the scheduled updates and check for tree nodes
         foreach ($uow->getScheduledEntityUpdates() AS $entity) {
             if ($this->isNode($entity)) {
-                $this->processScheduledEntityUpdate($em, $uow, $entity);
+                //$this->processScheduledEntityUpdate($entityManager, $uow, $entity);
             }
         }
 
         // Loop through the scheduled deletions and check for tree nodes
         foreach ($uow->getScheduledEntityDeletions() AS $entity) {
             if ($this->isNode($entity)) {
-                $this->processScheduledEntityDeletion($em, $uow, $entity);
+                //$this->processScheduledEntityDeletion($entityManager, $uow, $entity);
             }
         }
-    }
-
-    /**
-     * Get the data for the specified entity.
-     *
-     * @param object $entity The entity object.
-     *
-     * @return array Returns the array of data.
-     */
-    protected function getNodeData($entity)
-    {
-        return $this->nodeData[get_class($entity)];
     }
 }

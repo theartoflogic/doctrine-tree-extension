@@ -8,10 +8,10 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation as ClosureTree;
 
 /**
  * @ORM\Entity(repositoryClass="TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Entity\Repository\EntityRepository")
- * @ORM\Table("category")
- * @ClosureTree\Node
+ * @ORM\Table("category_with_depth_tree")
+ * @ClosureTree\Node(treeEntity="CategoryDepthTree")
  */
-class Category
+class CategoryWithTree
 {
     /**
      * @ORM\Id
