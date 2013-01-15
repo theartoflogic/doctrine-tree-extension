@@ -6,7 +6,9 @@ use Doctrine\Common\EventArgs;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Event\LifecycleEventArgs;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 use TheArtOfLogic\DoctrineTreeExtension\Listener\EventSubscriber as BaseEventSubscriber;
 use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Tree;
@@ -29,7 +31,9 @@ class EventSubscriber extends BaseEventSubscriber
         return array(
             'loadClassMetadata',
             'onFlush',
-            'postPersist'
+            'postPersist',
+            'preUpdate',
+            'postRemove'
         );
     }
 
@@ -147,19 +151,19 @@ class EventSubscriber extends BaseEventSubscriber
                     // Set the parent data
                     $closureTreeData['ancestor'] = $propertyData;
 
-                    break 2;
+                    break;
                 } elseif ($propertyAnnotation instanceof Descendant) {
 
                     // Set the parent data
                     $closureTreeData['descendant'] = $propertyData;
 
-                    break 2;
+                    break;
                 } elseif ($propertyAnnotation instanceof Depth) {
 
                     // Set the parent data
                     $closureTreeData['depth'] = $propertyData;
 
-                    break 2;
+                    break;
                 }
             }
         }
@@ -174,38 +178,147 @@ class EventSubscriber extends BaseEventSubscriber
     public function postPersist(LifecycleEventArgs $eventArgs)
     {
         $entity = $eventArgs->getEntity();
+
         $entityManager = $eventArgs->getEntityManager();
         $nodeClass = get_class($entity);
 
-        // Get node data
+        // Get metadata
         $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
 
-        // Get tree node data
-        $treeMetadata = $entityManager->getClassMetadata($nodeMetadata->closureTree['treeEntity']);
+        // Make sure the entity is a tree node
+        if (isset($nodeMetadata->closureTree)) {
+
+            // Save the node tree
+            $this->saveNodeTree($entityManager, $entity, $nodeMetadata);
+
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function preUpdate(PreUpdateEventArgs $eventArgs)
+    {
+        $entity = $eventArgs->getEntity();
+
+        $entityManager = $eventArgs->getEntityManager();
+        $nodeClass = get_class($entity);
+
+        // Get metadata
+        $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
+
+        // Make sure the entity is a tree node
+        if (isset($nodeMetadata->closureTree)) {
+
+            $parentColumn = $nodeMetadata->closureTree['parent']['fieldName'];
+
+            // Check if the node's parent changed
+            if ($eventArgs->hasChangedField($parentColumn)) {
+
+                // Delete the current node tree
+                $this->deleteNodeTree($entityManager, $entity, $nodeMetadata);
+
+                // Save the new node tree
+                $this->saveNodeTree($entityManager, $entity, $nodeMetadata);
+            }
+
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function postRemove(LifecycleEventArgs $eventArgs)
+    {
+        $entity = $eventArgs->getEntity();
+
+        $entityManager = $eventArgs->getEntityManager();
+        $nodeClass = get_class($entity);
+
+        // Get metadata
+        $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
+
+        // Make sure the entity is a tree node
+        if (isset($nodeMetadata->closureTree)) {
+
+            // Save the node tree
+            $this->deleteNodeTree($entityManager, $entity, $nodeMetadata);
+
+        }
+    }
+
+    /**
+     * Delete the tree hierarchy for the specified node.
+     *
+     * @param EntityManager $entityManager
+     * @param object $entity The node to delete the tree for.
+     * @param ClassMetadata $nodeMetadata
+     */
+    protected function deleteNodeTree(EntityManager $entityManager, $entity, ClassMetadata $nodeMetadata)
+    {
+        $treeClass = $nodeMetadata->closureTree['treeEntity'];
+
+        // Get the node details
+        $idColumn = $nodeMetadata->getSingleIdentifierFieldName();
+        $nodeId = $nodeMetadata->getReflectionProperty($idColumn)->getValue($entity);
+
+        // Delete current tree
+        $entityManager->getRepository($treeClass)->createQueryBuilder('t')
+            ->delete()
+            ->where('t.descendant = ?1')
+            ->setParameter(1, $nodeId)
+            ->getQuery()
+            ->execute();
+    }
+
+    /**
+     * Save the tree hierarchy for the specified node.
+     *
+     * @param EntityManager $entityManager
+     * @param object $entity The node to save the tree for.
+     * @param ClassMetadata $nodeMetadata
+     * @param object|null $parent The parent entity (or null to get it from the entity itself).
+     */
+    protected function saveNodeTree(EntityManager $entityManager, $entity, ClassMetadata $nodeMetadata, $parent=null)
+    {
+        $nodeClass = get_class($entity);
+        $treeClass = $nodeMetadata->closureTree['treeEntity'];
+
+        // Get metadata
+        $treeMetadata = $entityManager->getClassMetadata($treeClass);
 
         // Get the table name
         $tableName = $treeMetadata->getTableName();
         $idColumn = $nodeMetadata->getSingleIdentifierFieldName();
-        $parentColumn = $nodeMetadata->closureTree['parent']['fieldName'];
+        $ancestorColumn = $treeMetadata->closureTree['ancestor']['fieldName'];
+        $descendantColumn = $treeMetadata->closureTree['descendant']['fieldName'];
+        if ($treeMetadata->closureTree['depth']) {
+            $depthColumn = $treeMetadata->closureTree['depth']['fieldName'];
+        } else {
+            $depthColumn = null;
+        }
         $nodeId = $nodeMetadata->getReflectionProperty($idColumn)->getValue($entity);
-        $parentId = $nodeMetadata->getReflectionProperty($parentColumn)->getValue($entity);
+        $parent = $parent ?: $entity->getParent();
 
         // Check if the entity has a parent
-        if ($parentId) {
+        if ($parent) {
+
+            // Get the parent ID
+            $parentId = $parent->getId();
 
             // Format the query to insert the tree hierarchy
-            $query = 'INSERT INTO '. $tableName .' (ancestor, descendant';
-            if ($data['annotation']->withDepth) {
-                $query .= ', '. $data['annotation']->depthColumn;
+            $query = 'INSERT INTO '. $tableName .' ('. $ancestorColumn .', '. $descendantColumn;
+            if ($depthColumn) {
+                $query .= ', '. $depthColumn;
             }
-            $query .= ') SELECT ancestor, '. $identifier .' ';
-            if ($data['annotation']->withDepth) {
-                $query .= ', ('. $data['annotation']->depthColumn .' + 1) ';
+            $query .= ') SELECT '. $ancestorColumn .', '. $nodeId .' ';
+            if ($depthColumn) {
+                $query .= ', ('. $depthColumn .' + 1) ';
             }
             $query .= 'FROM '. $tableName .' ';
-            $query .= 'WHERE descendant = ? ';
+            $query .= 'WHERE '. $descendantColumn .' = ? ';
             $query .= 'UNION ALL SELECT '. $nodeId .', '. $nodeId;
-            if ($data['annotation']->withDepth) {
+            if ($depthColumn) {
                 $query .= ', 0';
             }
 
@@ -215,8 +328,13 @@ class EventSubscriber extends BaseEventSubscriber
         } else {
 
             // Format the query to insert the tree hierarchy
-            $query = 'INSERT INTO '. $tableName .' ('. $treeMetadata->closureTree['ancestor']['fieldName'] .') VALUES (?, ?';
-            if ($treeMetadata->closureTree['depth']) {
+            $query = 'INSERT INTO '. $tableName .' ';
+            $query .= '('. $ancestorColumn .', '. $descendantColumn;
+            if ($depthColumn) {
+                $query .= ', '. $depthColumn;
+            }
+            $query .= ') VALUES (?, ?';
+            if ($depthColumn) {
                 $query .= ', 0';
             }
             $query .= ')';
@@ -226,23 +344,10 @@ class EventSubscriber extends BaseEventSubscriber
 
         }
 
-        // Execute the query
-        $entityManager->getConnection()->executeQuery($query, $queryParams);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function processScheduledEntityUpdate(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
-    {
-
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function processScheduledEntityDeletion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity)
-    {
-
+        // Execute the query and close the cursor
+        $entityManager
+            ->getConnection()
+            ->executeQuery($query, $queryParams)
+            ->closeCursor();
     }
 }

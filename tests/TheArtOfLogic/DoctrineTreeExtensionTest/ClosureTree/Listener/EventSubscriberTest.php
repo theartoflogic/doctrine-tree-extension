@@ -4,6 +4,8 @@ namespace TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Listener;
 
 use TheArtOfLogic\DoctrineTreeExtensionTest\Listener\EventSubscriberTest as BaseEventSubscriberTest;
 use TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\Category;
+use TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithTree;
+use TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithDepthTree;
 use Doctrine\Common\EventManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Configuration;
@@ -21,76 +23,146 @@ class EventSubscriberTest extends BaseEventSubscriberTest
     const CATEGORY_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryTree';
     const CATEGORY_DEPTH_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryDepthTree';
 
-    /**
-     * This tests that the tree relationships are added
-     * properly when persisting a new root node.
-     */
-    public function testPersistRootNode()
+    public function testPersistRootNode_WithoutDepth()
     {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+
         // Get the entity manager
         $entityManager = $this->getEntityManager();
 
-        // Initialize the entity
-        $category = new Category();
-        $category->setName('iOS');
+        // Initialize the entities
+        $ios = new Category();
+        $ios->setName('iOS');
 
         // Persist the entity
-        $entityManager->persist($category);
+        $entityManager->persist($ios);
         $entityManager->flush();
 
         // Get the entity repository
-        $repository = $entityManager->getRepository(self::CATEGORY);
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_TREE);
 
-        // Find root nodes
-        $numRootNodes = $repository->findRootNodeCount();
+        // Make sure there is the correct number of root nodes
+        $this->assertEquals(1, $nodeRepository->findRootNodeCount());
 
-        // Make sure there is 1 root node
-        $this->assertEquals(1, $numRootNodes);
-    }
-
-    /**
-     * This tests that the tree relationships are added
-     * properly when persisting a new child node.
-     */
-    public function testPersistChildNode()
-    {
-        // Get the entity manager
-        $entityManager = $this->getEntityManager();
-
-        // Get the entity repository
-        $repository = $entityManager->getRepository(self::CATEGORY);
-
-        echo ('Count: '. count($repository->findAll()));
-
-        // Get the parent node
-        $parent = $repository->findOneById(1);
-
-        /*
-        $count = $repository->createQueryBuilder('c')
-            ->select('COUNT(c.id)')
+        // Make sure the tree row exists
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
             ->getQuery()
             ->getSingleScalarResult();
 
-        die('Count: '. $count);
-        */
+        $this->assertEquals(1, $treeExists);
 
-        // Initialize the entity
-        $category = new Category();
-        $category->setName('Acme Child');
-        $category->setParent($parent);
-
-        // Persist the entity
-        $entityManager->persist($category);
-        $entityManager->flush();
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    /*
-    protected function populateData($withDepth)
+    public function testPersistRootNode_WithoutDepth_WithTree()
     {
-        // iOS
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY_WITH_TREE,
+            self::CATEGORY_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Initialize the entities
+        $ios = new CategoryWithTree();
+        $ios->setName('iOS');
+
+        // Persist the entity
+        $entityManager->persist($ios);
+        $entityManager->flush();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY_WITH_TREE);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_TREE);
+
+        // Make sure there is the correct number of root nodes
+        $this->assertEquals(1, $nodeRepository->findRootNodeCount());
+
+        // Make sure the tree row exists
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $this->assertEquals(1, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY_WITH_TREE,
+            self::CATEGORY_TREE
+        ));
+    }
+
+    public function testPersistRootNode_WithDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY_WITH_DEPTH_TREE,
+            self::CATEGORY_DEPTH_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Initialize the entities
+        $ios = new CategoryWithDepthTree();
+        $ios->setName('iOS');
+
+        // Persist the entity
+        $entityManager->persist($ios);
+        $entityManager->flush();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY_WITH_DEPTH_TREE);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_DEPTH_TREE);
+
+        // Make sure there is the correct number of root nodes
+        $this->assertEquals(1, $nodeRepository->findRootNodeCount());
+
+        // Make sure the tree row exists
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.depth = 0')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $this->assertEquals(1, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+    }
+
+    public function testPersistChildNode_WithoutDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_TREE);
+
+        // Initialize the entities
         $ios = new Category();
         $ios->setName('iOS');
 
@@ -98,109 +170,287 @@ class EventSubscriberTest extends BaseEventSubscriberTest
         $iphone->setName('iPhone');
         $iphone->setParent($ios);
 
-        $iphone4 = new Category();
-        $iphone4->setName('iPhone 4');
-        $iphone4->setParent($iphone);
-
-        $iphone4S = new Category();
-        $iphone4S->setName('iPhone 4S');
-        $iphone4S->setParent($iphone);
-
-        $iphone5 = new Category();
-        $iphone5->setName('iPhone 5');
-        $iphone5->setParent($iphone);
-
         $ipad = new Category();
         $ipad->setName('iPad');
         $ipad->setParent($ios);
 
-        $ipadMini = new Category();
-        $ipadMini->setName('iPad Mini');
-        $ipadMini->setParent($ipad);
+        // Persist the entities
+        $entityManager->persist($ios);
+        $entityManager->persist($iphone);
+        $entityManager->persist($ipad);
+        $entityManager->flush();
 
-        // Android
-        $android = new Category();
-        $android->setName('Android');
+        // Test assertions
+        $this->assertEquals(1, $nodeRepository->findRootNodeCount());
+        $this->assertEquals(2, $nodeRepository->findChildNodeCount($ios->getId()));
 
-        $androidPhone = new Category();
-        $androidPhone->setName('Phone');
-        $androidPhone->setParent($android);
+        // Make sure the tree rows exists
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.ancestor != t.descendant')
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        $htcOneX = new Category();
-        $htcOneX->setName('HTC One X');
-        $htcOneX->setParent($androidPhone);
+        $this->assertEquals(2, $treeExists);
 
-        $galaxy3S = new Category();
-        $galaxy3S->setName('Samsung Galaxy III S');
-        $galaxy3S->setParent($androidPhone);
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+    }
 
-        $androidTablet = new Category();
-        $androidTablet->setName('Tablet');
-        $androidTablet->setParent($android);
-
-        $nexus7 = new Category();
-        $nexus7->setName('Google Nexus 7');
-        $nexus7->setParent($androidTablet);
-
-        $galaxyNote = new Category();
-        $galaxyNote->setName('Samsung Galaxy Note');
-        $galaxyNote->setParent($androidTablet);
-
-        // Windows
-        $windows = new Category();
-        $windows->setName('Windows');
-
-        $windowsPhone = new Category();
-        $windowsPhone->setName('Phone');
-        $windowsPhone->setParent($windows);
-
-        $nokiaLumia900 = new Category();
-        $nokiaLumia900->setName('Nokia Lumia 900');
-        $nokiaLumia900->setParent($windowsPhone);
-
-        $windowsTablet = new Category();
-        $windowsTablet->setName('Tablet');
-        $windowsTablet->setParent($windows);
-
-        $surface = new Category();
-        $surface->setName('Windows Surface');
-        $surface->setParent($windowsTablet);
-
-        $series7 = new Category();
-        $series7->setName('Samsumg Series 7');
-        $series7->setParent($windowsTablet);
+    public function testPersistChildNode_WithDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY_WITH_DEPTH_TREE,
+            self::CATEGORY_DEPTH_TREE
+        ));
 
         // Get the entity manager
         $entityManager = $this->getEntityManager();
 
-        // Persist the data
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY_WITH_DEPTH_TREE);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_DEPTH_TREE);
+
+        // Initialize the entities
+        $ios = new CategoryWithDepthTree();
+        $ios->setName('iOS');
+
+        $iphone = new CategoryWithDepthTree();
+        $iphone->setName('iPhone');
+        $iphone->setParent($ios);
+
+        $ipad = new CategoryWithDepthTree();
+        $ipad->setName('iPad');
+        $ipad->setParent($ios);
+
+        // Persist the entities
         $entityManager->persist($ios);
         $entityManager->persist($iphone);
-        $entityManager->persist($iphone4);
-        $entityManager->persist($iphone4S);
-        $entityManager->persist($iphone5);
         $entityManager->persist($ipad);
-        $entityManager->persist($ipadMini);
-
-        $entityManager->persist($android);
-        $entityManager->persist($androidPhone);
-        $entityManager->persist($htcOneX);
-        $entityManager->persist($galaxy3S);
-        $entityManager->persist($androidTablet);
-        $entityManager->persist($nexus7);
-        $entityManager->persist($galaxyNote);
-
-        $entityManager->persist($windows);
-        $entityManager->persist($windowsPhone);
-        $entityManager->persist($nokiaLumia900);
-        $entityManager->persist($windowsTablet);
-        $entityManager->persist($surface);
-        $entityManager->persist($series7);
-
-        // Save the data
         $entityManager->flush();
+
+        // Test assertions
+        $this->assertEquals(1, $nodeRepository->findRootNodeCount());
+        $this->assertEquals(2, $nodeRepository->findChildNodeCount($ios->getId()));
+
+        // Make sure the tree rows exists
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.depth > 0')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $this->assertEquals(2, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
     }
-    */
+
+    public function testUpdateParentNode_WithoutDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_TREE);
+
+        // Initialize the entities
+        $ios = new Category();
+        $ios->setName('iOS');
+
+        $android = new Category();
+        $android->setName('Android');
+
+        $iphone = new Category();
+        $iphone->setName('iPhone');
+        $iphone->setParent($android);
+
+        // Persist the entities
+        $entityManager->persist($ios);
+        $entityManager->persist($android);
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Make sure iPhone is a descendant of Android
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.ancestor = :ancestor')
+            ->andWhere('t.descendant = :descendant')
+            ->setParameter('ancestor', $android->getId())
+            ->setParameter('descendant', $iphone->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Make sure the current parent for iPhone is Android
+        $this->assertEquals($iphone->getParent()->getId(), $android->getId());
+        $this->assertEquals(1, $treeExists);
+
+        // Update the parent
+        $iphone->setParent($ios);
+
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Make sure iPhone is a descendant of iOS
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.ancestor = :ancestor')
+            ->andWhere('t.descendant = :descendant')
+            ->setParameter('ancestor', $ios->getId())
+            ->setParameter('descendant', $iphone->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Make sure the current parent for iPhone is iOS
+        $this->assertEquals($iphone->getParent()->getId(), $ios->getId());
+        $this->assertEquals(1, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+    }
+
+    public function testUpdateParentNode_WithDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY_WITH_DEPTH_TREE,
+            self::CATEGORY_DEPTH_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY_WITH_DEPTH_TREE);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_DEPTH_TREE);
+
+        // Initialize the entities
+        $ios = new CategoryWithDepthTree();
+        $ios->setName('iOS');
+
+        $android = new CategoryWithDepthTree();
+        $android->setName('Android');
+
+        $iphone = new CategoryWithDepthTree();
+        $iphone->setName('iPhone');
+        $iphone->setParent($android);
+
+        // Persist the entities
+        $entityManager->persist($ios);
+        $entityManager->persist($android);
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Make sure iPhone is a descendant of Android
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.ancestor = :ancestor')
+            ->andWhere('t.descendant = :descendant')
+            ->andWhere('t.depth = 1')
+            ->setParameter('ancestor', $android->getId())
+            ->setParameter('descendant', $iphone->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Make sure the current parent for iPhone is Android
+        $this->assertEquals($iphone->getParent()->getId(), $android->getId());
+        $this->assertEquals(1, $treeExists);
+
+        // Update the parent
+        $iphone->setParent($ios);
+
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Make sure iPhone is a descendant of iOS
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->where('t.ancestor = :ancestor')
+            ->andWhere('t.descendant = :descendant')
+            ->andWhere('t.depth = 1')
+            ->setParameter('ancestor', $ios->getId())
+            ->setParameter('descendant', $iphone->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Make sure the current parent for iPhone is iOS
+        $this->assertEquals($iphone->getParent()->getId(), $ios->getId());
+        $this->assertEquals(1, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY_WITH_DEPTH_TREE,
+            self::CATEGORY_DEPTH_TREE
+        ));
+    }
+
+    public function testDeleteRootNode_WithoutDepth()
+    {
+        // Create the database tables
+        $this->createTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Initialize the entities
+        $ios = new Category();
+        $ios->setName('iOS');
+
+        // Initialize the entities
+        $iphone = new Category();
+        $iphone->setName('iPhone');
+        $iphone->setParent($ios);
+
+        // Persist the entity
+        $entityManager->persist($ios);
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Now delete the root node
+        $entityManager->remove($ios);
+        $entityManager->flush();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_TREE);
+
+        // Make sure all nodes were deleted
+        $this->assertEquals(0, $nodeRepository->findNodeCount());
+
+        // Make sure all tree rows were deleted
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $this->assertEquals(0, $treeExists);
+
+        // Drop the database tables
+        $this->dropTables(array(
+            self::CATEGORY,
+            self::CATEGORY_TREE
+        ));
+    }
 
     /**
      * {@inheritdoc}
@@ -208,16 +458,6 @@ class EventSubscriberTest extends BaseEventSubscriberTest
     protected function getEventSubscriberClass()
     {
         return 'TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Listener\EventSubscriber';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function getEntityClasses()
-    {
-        return array(
-            'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\Category'
-        );
     }
 
     /**

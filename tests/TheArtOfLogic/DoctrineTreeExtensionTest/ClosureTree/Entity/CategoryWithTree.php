@@ -26,14 +26,14 @@ class CategoryWithTree
     protected $name;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Category", inversedBy="children")
+     * @ORM\ManyToOne(targetEntity="CategoryWithTree", inversedBy="children")
      * @ORM\JoinColumn(referencedColumnName="id", onDelete="CASCADE")
      * @ClosureTree\NodeParent
      */
     protected $parent;
 
     /**
-     * @ORM\OneToMany(targetEntity="Category", mappedBy="parent")
+     * @ORM\OneToMany(targetEntity="CategoryWithTree", mappedBy="parent")
      */
     protected $children;
     
@@ -66,7 +66,7 @@ class CategoryWithTree
         return $this->name;
     }
 
-    public function setParent(Category $parent = null)
+    public function setParent(CategoryWithTree $parent = null)
     {
         $this->parent = $parent;
     
@@ -78,14 +78,14 @@ class CategoryWithTree
         return $this->parent;
     }
 
-    public function addChild(Category $child)
+    public function addChild(CategoryWithTree $child)
     {
         $this->children[] = $child;
     
         return $this;
     }
 
-    public function removeChild(Category $child)
+    public function removeChild(CategoryWithTree $child)
     {
         $this->children->removeElement($child);
     }

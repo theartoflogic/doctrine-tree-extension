@@ -23,20 +23,6 @@ abstract class EventSubscriber implements BaseEventSubscriber
     protected $reader;
 
     /**
-     * Holds the data for the node entities.
-     *
-     * @var array
-     */
-    protected $nodeData = array();
-
-    /**
-     * Holds the data for the node tree entities.
-     *
-     * @var array
-     */
-    protected $nodeTreeData = array();
-
-    /**
      * Process the scheduled entity insertion for the specified entity.
      *
      * @param EntityManager $entityManager
@@ -52,7 +38,7 @@ abstract class EventSubscriber implements BaseEventSubscriber
      * @param UnitOfWork $unitOfWork
      * @param object $entity The entity to process.
      */
-    abstract protected function processScheduledEntityUpdate(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
+    //abstract protected function processScheduledEntityUpdate(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
 
     /**
      * Process the scheduled entity deletion for the specified entity.
@@ -61,7 +47,7 @@ abstract class EventSubscriber implements BaseEventSubscriber
      * @param UnitOfWork $unitOfWork
      * @param object $entity The entity to process.
      */
-    abstract protected function processScheduledEntityDeletion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
+    //abstract protected function processScheduledEntityDeletion(EntityManager $entityManager, UnitOfWork $unitOfWork, $entity);
 
     /**
      * Set the annotation reader.
@@ -84,9 +70,7 @@ abstract class EventSubscriber implements BaseEventSubscriber
      */
     public function isNode($entity)
     {
-        $className = (is_string($entity)) ? $entity : get_class($entity);
-
-        return array_key_exists($className, $this->nodeData);
+        return (is_object($entity) && isset($entity->closureTree));
     }
 
     /**
@@ -98,37 +82,7 @@ abstract class EventSubscriber implements BaseEventSubscriber
      */
     public function isNodeTree($entity)
     {
-        $className = (is_string($entity)) ? $entity : get_class($entity);
-
-        return array_key_exists($className, $this->nodeTreeData);
-    }
-
-    /**
-     * Get the metadata for the specified node.
-     *
-     * @param object $entity The entity object.
-     *
-     * @return ClassMetadata Returns the metadata.
-     */
-    protected function getNodeData($entity)
-    {
-        $className = (is_string($entity)) ? $entity : get_class($entity);
-
-        return $this->nodeData[$className];
-    }
-
-    /**
-     * Get the metadata for the specified node tree.
-     *
-     * @param object $entity The entity object.
-     *
-     * @return ClassMetadata Returns the metadata.
-     */
-    protected function getNodeTreeData($entity)
-    {
-        $className = (is_string($entity)) ? $entity : get_class($entity);
-
-        return $this->nodeTreeData[$className];
+        return (is_object($entity) && isset($entity->closureTree));
     }
 
     public function onFlush(OnFlushEventArgs $eventArgs)

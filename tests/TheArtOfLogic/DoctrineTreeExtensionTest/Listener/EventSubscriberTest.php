@@ -37,7 +37,12 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
      */
     protected $annotationDriver;
 
-    public function setup()
+    /**
+     * @var SchemaTool
+     */
+    protected $schemaTool;
+
+    public function setUp()
     {
         // Make sure the sqlite extension is loaded
         if (!extension_loaded('pdo_sqlite')) {
@@ -65,18 +70,6 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
      * @return array Returns an array containing the list of subscribed events.
      */
     abstract protected function getSubscribedEvents();
-    
-    /**
-     * Get the list of entity classes to use.
-     *
-     * @return array Returns an array containing the list of entity classes to use.
-     */
-    abstract protected function getEntityClasses();
-
-    /**
-     * Populate the database with test data.
-     */
-    //abstract protected function populateData();
 
     /**
      * Get the event manager.
@@ -132,22 +125,59 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
                 'memory' => true
             );
 
+            $params = array(
+                'driver' => 'pdo_mysql',
+                'host' => 'mysqldb',
+                'user' => 'phunware',
+                'password' => 'phunware10',
+                'dbname' => 'test'
+            );
+
             $entityManager = EntityManager::create($params, $this->getEntityManagerConfiguration(), $this->getEventManager());
-
-            // Get the metadata for each entity used
-            $schema = array_map(function($class) use ($entityManager) {
-                return $entityManager->getClassMetadata($class);
-            }, $this->getEntityClasses());
-
-            // Make sure the schema exists
-            $schemaTool = new SchemaTool($entityManager);
-            $schemaTool->dropSchema(array());
-            $schemaTool->createSchema($schema);
            
             $this->entityManager = $entityManager;
         }
 
         return $this->entityManager;
+    }
+
+    /**
+     * Create the database tables for the specified entity classes.
+     *
+     * @param array $classes An array containing the list of class names for each entity.
+     */
+    protected function createTables($classes)
+    {
+        $entityManager = $this->getEntityManager();
+
+        // Get the metadata for each entity used
+        $schema = array_map(function($class) use ($entityManager) {
+            return $entityManager->getClassMetadata($class);
+        }, $classes);
+
+        // Setup the database
+        $schemaTool = $this->getSchemaTool();
+        $schemaTool->dropSchema($schema);
+        $schemaTool->createSchema($schema);
+    }
+
+    /**
+     * Drop the database tables for the specified entity classes.
+     *
+     * @param array $classes An array containing the list of class names for each entity.
+     */
+    protected function dropTables($classes)
+    {
+        $entityManager = $this->getEntityManager();
+        
+        // Get the metadata for each entity used
+        $schema = array_map(function($class) use ($entityManager) {
+            return $entityManager->getClassMetadata($class);
+        }, $classes);
+
+        // Setup the database
+        $schemaTool = $this->getSchemaTool();
+        $schemaTool->dropSchema($schema);
     }
 
     /**
@@ -178,43 +208,59 @@ abstract class EventSubscriberTest extends \PHPUnit_Framework_TestCase
             }
 
             // Initialize the configuration object
-            $this->entityManagerConfig = $this->getMock($configurationClass, $mockMethods);
+            $config = $this->getMock($configurationClass, $mockMethods);
 
-            $this->entityManagerConfig->expects($this->once())
+            $config->expects($this->once())
                 ->method('getProxyDir')
-                ->will($this->returnValue(__DIR__ .'/../../tmp'));
+                ->will($this->returnValue(__DIR__ .'/../../../tmp'));
 
-            $this->entityManagerConfig->expects($this->once())
+            $config->expects($this->once())
                 ->method('getProxyNamespace')
                 ->will($this->returnValue('Proxy'));
 
-            $this->entityManagerConfig->expects($this->once())
+            $config->expects($this->once())
                 ->method('getAutoGenerateProxyClasses')
                 ->will($this->returnValue(true));
 
-            $this->entityManagerConfig->expects($this->once())
+            $config->expects($this->once())
                 ->method('getClassMetadataFactoryName')
                 ->will($this->returnValue('Doctrine\ORM\Mapping\ClassMetadataFactory'));
 
-            $this->entityManagerConfig->expects($this->any())
+            $config->expects($this->any())
                 ->method('getMetadataDriverImpl')
                 ->will($this->returnValue($this->getMetadataDriverImplementation()));
 
-            $this->entityManagerConfig->expects($this->any())
+            $config->expects($this->any())
                 ->method('getDefaultRepositoryClassName')
                 ->will($this->returnValue('Doctrine\ORM\EntityRepository'));
 
-            $this->entityManagerConfig->expects($this->any())
+            $config->expects($this->any())
                 ->method('getQuoteStrategy')
                 ->will($this->returnValue(new DefaultQuoteStrategy()));
 
-            $this->entityManagerConfig->expects($this->any())
+            $config->expects($this->any())
                 ->method('getNamingStrategy')
                 ->will($this->returnValue(new DefaultNamingStrategy()));
 
+            // Set the config object
+            $this->entityManagerConfig = $config;
         }
 
         return $this->entityManagerConfig;
+    }
+
+    /**
+     * Get the schema tool.
+     *
+     * @return SchemaTool
+     */
+    protected function getSchemaTool()
+    {
+        if (!$this->schemaTool) {
+            $this->schemaTool = new SchemaTool($this->getEntityManager());
+        }
+
+        return $this->schemaTool;
     }
 
     /**

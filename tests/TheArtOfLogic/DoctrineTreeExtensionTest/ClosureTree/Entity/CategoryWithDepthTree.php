@@ -11,7 +11,7 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation as ClosureTree;
  * @ORM\Table("category_with_depth_tree")
  * @ClosureTree\Node(treeEntity="CategoryDepthTree")
  */
-class CategoryWithTree
+class CategoryWithDepthTree
 {
     /**
      * @ORM\Id
@@ -26,14 +26,14 @@ class CategoryWithTree
     protected $name;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Category", inversedBy="children")
+     * @ORM\ManyToOne(targetEntity="CategoryWithDepthTree", inversedBy="children")
      * @ORM\JoinColumn(referencedColumnName="id", onDelete="CASCADE")
      * @ClosureTree\NodeParent
      */
     protected $parent;
 
     /**
-     * @ORM\OneToMany(targetEntity="Category", mappedBy="parent")
+     * @ORM\OneToMany(targetEntity="CategoryWithDepthTree", mappedBy="parent")
      */
     protected $children;
     
@@ -66,7 +66,7 @@ class CategoryWithTree
         return $this->name;
     }
 
-    public function setParent(Category $parent = null)
+    public function setParent(CategoryWithDepthTree $parent = null)
     {
         $this->parent = $parent;
     
@@ -78,14 +78,14 @@ class CategoryWithTree
         return $this->parent;
     }
 
-    public function addChild(Category $child)
+    public function addChild(CategoryWithDepthTree $child)
     {
         $this->children[] = $child;
     
         return $this;
     }
 
-    public function removeChild(Category $child)
+    public function removeChild(CategoryWithDepthTree $child)
     {
         $this->children->removeElement($child);
     }

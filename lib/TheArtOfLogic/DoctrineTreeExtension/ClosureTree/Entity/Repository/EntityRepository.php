@@ -91,12 +91,12 @@ class EntityRepository extends BaseEntityRepository
             ->from($metadata->name, 'node');
 
         // Get the name of the parent field
-        $parentField = $metadata->associationMappings['parent']['fieldName'];
+        $parentColumn = $metadata->closureTree['parent']['fieldName'];
 
         if (!$parentId) {
-            $queryBuilder->where('node.'. $parentField .' IS NULL');
+            $queryBuilder->where('node.'. $parentColumn .' IS NULL');
         } else {
-            $queryBuilder->where('node.'. $parentField .' = :parentId')->setParameter('parentId', $parentId);
+            $queryBuilder->where('node.'. $parentColumn .' = :parentId')->setParameter('parentId', $parentId);
         }
 
         return $queryBuilder;
