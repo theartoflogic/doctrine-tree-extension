@@ -17,16 +17,16 @@ use Doctrine\ORM\Mapping\DefaultNamingStrategy;
 class EventSubscriberTest extends BaseEventSubscriberTest
 {
     // Paths to entity classes
-    const CATEGORY = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\Category';
-    const CATEGORY_WITH_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithTree';
-    const CATEGORY_WITH_DEPTH_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithDepthTree';
-    const CATEGORY_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryTree';
-    const CATEGORY_DEPTH_TREE = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryDepthTree';
+    const CATEGORY                  = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\Category';
+    const CATEGORY_WITH_TREE        = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithTree';
+    const CATEGORY_WITH_DEPTH_TREE  = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryWithDepthTree';
+    const CATEGORY_TREE             = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryTree';
+    const CATEGORY_DEPTH_TREE       = 'TheArtOfLogic\DoctrineTreeExtensionTest\ClosureTree\Entity\CategoryDepthTree';
 
     public function testPersistRootNode_WithoutDepth()
     {
         // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY,
             self::CATEGORY_TREE
         ));
@@ -56,18 +56,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(1, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testPersistRootNode_WithoutDepth_WithTree()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY_WITH_TREE,
             self::CATEGORY_TREE
         ));
@@ -97,18 +90,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(1, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY_WITH_TREE,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testPersistRootNode_WithDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY_WITH_DEPTH_TREE,
             self::CATEGORY_DEPTH_TREE
         ));
@@ -139,18 +125,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(1, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testPersistChildNode_WithoutDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY,
             self::CATEGORY_TREE
         ));
@@ -192,18 +171,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(2, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testPersistChildNode_WithDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY_WITH_DEPTH_TREE,
             self::CATEGORY_DEPTH_TREE
         ));
@@ -245,18 +217,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(2, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testUpdateParentNode_WithoutDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY,
             self::CATEGORY_TREE
         ));
@@ -318,18 +283,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
         // Make sure the current parent for iPhone is iOS
         $this->assertEquals($iphone->getParent()->getId(), $ios->getId());
         $this->assertEquals(1, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
-        ));
     }
 
     public function testUpdateParentNode_WithDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY_WITH_DEPTH_TREE,
             self::CATEGORY_DEPTH_TREE
         ));
@@ -393,18 +351,11 @@ class EventSubscriberTest extends BaseEventSubscriberTest
         // Make sure the current parent for iPhone is iOS
         $this->assertEquals($iphone->getParent()->getId(), $ios->getId());
         $this->assertEquals(1, $treeExists);
-
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY_WITH_DEPTH_TREE,
-            self::CATEGORY_DEPTH_TREE
-        ));
     }
 
     public function testDeleteRootNode_WithoutDepth()
     {
-        // Create the database tables
-        $this->createTables(array(
+        $this->useTables(array(
             self::CATEGORY,
             self::CATEGORY_TREE
         ));
@@ -426,6 +377,8 @@ class EventSubscriberTest extends BaseEventSubscriberTest
         $entityManager->persist($iphone);
         $entityManager->flush();
 
+        //die('ok');
+
         // Now delete the root node
         $entityManager->remove($ios);
         $entityManager->flush();
@@ -444,12 +397,50 @@ class EventSubscriberTest extends BaseEventSubscriberTest
             ->getSingleScalarResult();
 
         $this->assertEquals(0, $treeExists);
+    }
 
-        // Drop the database tables
-        $this->dropTables(array(
-            self::CATEGORY,
-            self::CATEGORY_TREE
+    public function testDeleteRootNode_WithDepth()
+    {
+        $this->useTables(array(
+            self::CATEGORY_WITH_DEPTH_TREE,
+            self::CATEGORY_DEPTH_TREE
         ));
+
+        // Get the entity manager
+        $entityManager = $this->getEntityManager();
+
+        // Initialize the entities
+        $ios = new CategoryWithDepthTree();
+        $ios->setName('iOS');
+
+        // Initialize the entities
+        $iphone = new CategoryWithDepthTree();
+        $iphone->setName('iPhone');
+        $iphone->setParent($ios);
+
+        // Persist the entity
+        $entityManager->persist($ios);
+        $entityManager->persist($iphone);
+        $entityManager->flush();
+
+        // Now delete the root node
+        $entityManager->remove($ios);
+        $entityManager->flush();
+
+        // Get the entity repository
+        $nodeRepository = $entityManager->getRepository(self::CATEGORY_WITH_DEPTH_TREE);
+        $treeRepository = $entityManager->getRepository(self::CATEGORY_DEPTH_TREE);
+
+        // Make sure all nodes were deleted
+        $this->assertEquals(0, $nodeRepository->findNodeCount());
+
+        // Make sure all tree rows were deleted
+        $treeExists = $treeRepository->createQueryBuilder('t')
+            ->select('COUNT(t.ancestor)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $this->assertEquals(0, $treeExists);
     }
 
     /**
@@ -463,11 +454,12 @@ class EventSubscriberTest extends BaseEventSubscriberTest
     /**
      * {@inheritdoc}
      */
-    protected function getSubscribedEvents()
+    public function getSubscribedEvents()
     {
         return array(
             'loadClassMetadata',
-            'onFlush'
+            'postPersist',
+            'preUpdate'
         );
     }
 }

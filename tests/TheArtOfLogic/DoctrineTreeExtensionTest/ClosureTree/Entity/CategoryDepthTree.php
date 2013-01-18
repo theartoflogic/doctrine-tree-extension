@@ -9,7 +9,7 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Entity\AbstractDepthTree;
 /**
  * @ORM\Entity
  * @ORM\Table("category_depth_tree")
- * @ClosureTree\Tree(nodeEntity="Category")
+ * @ClosureTree\Tree(nodeEntity="CategoryWithDepthTree")
  */
 class CategoryDepthTree extends AbstractDepthTree
 {

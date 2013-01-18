@@ -128,41 +128,34 @@ class EntityRepository extends BaseEntityRepository
     public function getChildHierarchyQueryBuilder($parentId=null)
     {
         // Get class metadata
-        $meta = $this->getClassMetadata();
+        $metadata = $this->getClassMetadata();
+        $treeMetadata = $this->_em->getClassMetadata($metadata->closureTree->treeEntity);
+
+        // Get the column names
+        $nodeIdColumn = $metadata->getSingleIdentifierColumnName();
+        $ancestorColumn = $treeMetadata->closureTree['ancestorColumn']['fieldName'];
+        $descendantColumn = $treeMetadata->closureTree['descendantColumn']['fieldName'];
 
         // Create the query builder
         $queryBuilder = $this->_em->createQueryBuilder();
 
         $queryBuilder
             ->select('node')
-            ->from($meta->name, 'node')
-            ->innerJoin('');
-
-        // Get the name of the parent field
-        $parentField = $meta->associationMappings['parent']['fieldName'];
-
-        if (!$parentId) {
-            $queryBuilder->where('node.'. $parentField .' IS NULL');
-        } else {
-            $queryBuilder->where('node.'. $parentField .' = :parentId')
-                ->setParameter('parentId', $parentId);
-        }
-
-        if ($sortBy) {
-            $sortDir = strtolower($sortDir) ?: 'asc';
-            $queryBuilder->orderBy($sortBy, $sortDir);
-        }
+            ->from($metadata->name, 'node')
+            ->innerJoin($treeMetadata->name, 'tree', 'WITH', 'node.'. $nodeIdColumn .' = tree.'. $descendantColumn)
+            ->where('tree.'. $ancestorColumn .' = :ancestor')
+            ->setParameter('ancestor', $parentId);
 
         return $queryBuilder;
     }
 
-    public function findParentHierarchy()
+    public function findChildHierarchy($parentId)
     {
-        
+        return $this->getChildHierarchyQueryBuilder($parentId)->getQuery()->getResult();
     }
 
-    public function findChildHierarchy()
+    public function findParentHierarchy($childId)
     {
-        
+        return $this->getParentHierarchyQueryBuilder($childId)->getQuery()->getResult();
     }
 }

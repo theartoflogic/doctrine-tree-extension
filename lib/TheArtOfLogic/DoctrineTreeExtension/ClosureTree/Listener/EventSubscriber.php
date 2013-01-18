@@ -3,6 +3,7 @@
 namespace TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Listener;
 
 use Doctrine\Common\EventArgs;
+use Doctrine\ORM\Version;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -30,10 +31,8 @@ class EventSubscriber extends BaseEventSubscriber
     {
         return array(
             'loadClassMetadata',
-            'onFlush',
             'postPersist',
-            'preUpdate',
-            'postRemove'
+            'preUpdate'
         );
     }
 
@@ -168,6 +167,82 @@ class EventSubscriber extends BaseEventSubscriber
             }
         }
 
+        // Check if the ancestor/descendant associations exists
+        if (
+            !$metadata->isMappedSuperclass &&
+            (
+                !$metadata->hasAssociation('ancestor') ||
+                !$metadata->hasAssociation('descendant')
+            )
+        ) {
+            // Get the node metadata
+            $nodeMetadata = $eventArgs->getEntityManager()->getClassMetadata($closureTreeData['nodeEntity']);
+
+            // Get the ID column name
+            $nodeIdColumn = $nodeMetadata->getSingleIdentifierFieldName();
+
+            // Check for the ancestor association
+            if (!$metadata->hasAssociation('ancestor')) {
+
+                $ancestorMapping = array(
+                    'fieldName' => 'ancestor',
+                    'id' => true,
+                    'joinColumns' => array(
+                        array(
+                            'name' => 'ancestor',
+                            'referencedColumnName' => $nodeIdColumn,
+                            'unique' => false,
+                            'nullable' => false,
+                            'onDelete' => 'CASCADE',
+                            'onUpdate' => null,
+                            'columnDefinition' => null,
+                        )
+                    ),
+                    'inversedBy' => null,
+                    'targetEntity' => $nodeMetadata->name,
+                    'cascade' => null,
+                    'fetch' => ClassMetadataInfo::FETCH_LAZY
+                );
+
+                // Map the many-to-one association
+                $metadata->mapManyToOne($ancestorMapping);
+
+                // Set the ancestor field mapping
+                $closureTreeData['ancestor'] = $ancestorMapping;
+            }
+
+            // Check for the descendany association
+            if (!$metadata->hasAssociation('descendant')) {
+
+                $descendantMapping = array(
+                    'fieldName' => 'descendant',
+                    'id' => true,
+                    'joinColumns' => array(
+                        array(
+                            'name' => 'descendant',
+                            'referencedColumnName' => $nodeIdColumn,
+                            'unique' => false,
+                            'nullable' => false,
+                            'onDelete' => 'CASCADE',
+                            'onUpdate' => null,
+                            'columnDefinition' => null,
+                        )
+                    ),
+                    'inversedBy' => null,
+                    'targetEntity' => $nodeMetadata->name,
+                    'cascade' => null,
+                    'fetch' => ClassMetadataInfo::FETCH_LAZY
+                );
+
+                // Map the many-to-one association
+                $metadata->mapManyToOne($descendantMapping);
+
+                // Set the ancestor field mapping
+                $closureTreeData['descendant'] = $descendantMapping;
+            }
+
+        }
+
         // Set the closure tree data
         $metadata->closureTree = $closureTreeData;
     }
@@ -226,28 +301,6 @@ class EventSubscriber extends BaseEventSubscriber
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function postRemove(LifecycleEventArgs $eventArgs)
-    {
-        $entity = $eventArgs->getEntity();
-
-        $entityManager = $eventArgs->getEntityManager();
-        $nodeClass = get_class($entity);
-
-        // Get metadata
-        $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
-
-        // Make sure the entity is a tree node
-        if (isset($nodeMetadata->closureTree)) {
-
-            // Save the node tree
-            $this->deleteNodeTree($entityManager, $entity, $nodeMetadata);
-
-        }
-    }
-
-    /**
      * Delete the tree hierarchy for the specified node.
      *
      * @param EntityManager $entityManager
@@ -257,15 +310,17 @@ class EventSubscriber extends BaseEventSubscriber
     protected function deleteNodeTree(EntityManager $entityManager, $entity, ClassMetadata $nodeMetadata)
     {
         $treeClass = $nodeMetadata->closureTree['treeEntity'];
+        $treeMetadata = $entityManager->getClassMetadata($treeClass);
 
         // Get the node details
         $idColumn = $nodeMetadata->getSingleIdentifierFieldName();
         $nodeId = $nodeMetadata->getReflectionProperty($idColumn)->getValue($entity);
+        $descendantColumn = $treeMetadata->closureTree['descendant']['fieldName'];
 
         // Delete current tree
-        $entityManager->getRepository($treeClass)->createQueryBuilder('t')
+        $result = $entityManager->getRepository($treeClass)->createQueryBuilder('t')
             ->delete()
-            ->where('t.descendant = ?1')
+            ->orWhere('t.'. $descendantColumn .' = ?1')
             ->setParameter(1, $nodeId)
             ->getQuery()
             ->execute();

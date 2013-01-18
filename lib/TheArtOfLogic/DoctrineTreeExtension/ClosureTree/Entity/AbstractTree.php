@@ -7,21 +7,11 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation as ClosureTree;
 
 /**
  * @ORM\MappedSuperclass
+ * @ClosureTree\Tree
  */
 abstract class AbstractTree
 {
-    /**
-     * @ORM\Id
-     * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
-     * @ClosureTree\Ancestor
-     */
     protected $ancestor;
-
-    /**
-     * @ORM\Id
-     * @ORM\Column(type="integer", length=10, options={"unsigned"=true})
-     * @ClosureTree\Descendant
-     */
     protected $descendant;
 
     /**
