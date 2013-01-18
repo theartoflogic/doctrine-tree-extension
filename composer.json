@@ -21,12 +21,11 @@
     ],
     "require": {
         "php": ">=5.3.2",
-        "doctrine/common": "dev-master"
+        "doctrine/orm": "dev-master"
     },
     "require-dev": {
         "symfony/config": "dev-master",
-        "symfony/http-kernel": "dev-master",
-        "doctrine/orm": "dev-master"
+        "symfony/http-kernel": "dev-master"
     },
     "autoload": {
         "psr-0": { "TheArtOfLogic\\DoctrineTreeExtension": "lib/" }
