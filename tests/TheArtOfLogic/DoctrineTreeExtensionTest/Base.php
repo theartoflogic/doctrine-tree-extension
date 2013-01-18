@@ -130,14 +130,6 @@ abstract class Base extends \PHPUnit_Framework_TestCase
                 'memory' => true
             );
 
-            $params = array(
-                'driver' => 'pdo_mysql',
-                'host' => 'mysqldb',
-                'user' => 'phunware',
-                'password' => 'phunware10',
-                'dbname' => 'test'
-            );
-
             $entityManager = EntityManager::create($params, $this->getEntityManagerConfiguration(), $this->getEventManager());
            
             $this->entityManager = $entityManager;

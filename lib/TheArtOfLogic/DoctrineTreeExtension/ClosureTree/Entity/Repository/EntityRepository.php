@@ -125,16 +125,16 @@ class EntityRepository extends BaseEntityRepository
      *
      * @return object Returns an instance of the query builder.
      */
-    public function getChildHierarchyQueryBuilder($parentId=null)
+    public function getChildHierarchyQueryBuilder($parentId = null, $withParent = false)
     {
         // Get class metadata
         $metadata = $this->getClassMetadata();
-        $treeMetadata = $this->_em->getClassMetadata($metadata->closureTree->treeEntity);
+        $treeMetadata = $this->_em->getClassMetadata($metadata->closureTree['treeEntity']);
 
         // Get the column names
         $nodeIdColumn = $metadata->getSingleIdentifierColumnName();
-        $ancestorColumn = $treeMetadata->closureTree['ancestorColumn']['fieldName'];
-        $descendantColumn = $treeMetadata->closureTree['descendantColumn']['fieldName'];
+        $ancestorColumn = $treeMetadata->closureTree['ancestor']['fieldName'];
+        $descendantColumn = $treeMetadata->closureTree['descendant']['fieldName'];
 
         // Create the query builder
         $queryBuilder = $this->_em->createQueryBuilder();
@@ -145,6 +145,11 @@ class EntityRepository extends BaseEntityRepository
             ->innerJoin($treeMetadata->name, 'tree', 'WITH', 'node.'. $nodeIdColumn .' = tree.'. $descendantColumn)
             ->where('tree.'. $ancestorColumn .' = :ancestor')
             ->setParameter('ancestor', $parentId);
+
+        // Check if we should exclude the parent itself
+        if (!$withParent) {
+            $queryBuilder->andWhere('tree.'. $ancestorColumn .' != tree.'. $descendantColumn);
+        }
 
         return $queryBuilder;
     }

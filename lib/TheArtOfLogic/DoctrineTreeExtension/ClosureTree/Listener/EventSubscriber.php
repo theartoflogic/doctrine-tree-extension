@@ -32,7 +32,8 @@ class EventSubscriber extends BaseEventSubscriber
         return array(
             'loadClassMetadata',
             'postPersist',
-            'preUpdate'
+            'preUpdate',
+            'preRemove'
         );
     }
 
@@ -301,6 +302,33 @@ class EventSubscriber extends BaseEventSubscriber
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function preRemove(LifecycleEventArgs $eventArgs)
+    {
+        $entity = $eventArgs->getEntity();
+
+        $entityManager = $eventArgs->getEntityManager();
+        $nodeClass = get_class($entity);
+
+        // Get metadata
+        $nodeMetadata = $entityManager->getClassMetadata($nodeClass);
+
+        // Make sure the entity is a tree node
+        if (isset($nodeMetadata->closureTree)) {
+
+            // Check if the database platform supports foreign key constraints,
+            // if not then we need to manually delete the tree hierarchy
+            if (!$entityManager->getConnection()->getDatabasePlatform()->supportsForeignKeyConstraints()) {
+
+                $this->deleteNodeTree($entityManager, $entity, $nodeMetadata);
+
+            }
+
+        }
+    }
+
+    /**
      * Delete the tree hierarchy for the specified node.
      *
      * @param EntityManager $entityManager
@@ -317,11 +345,20 @@ class EventSubscriber extends BaseEventSubscriber
         $nodeId = $nodeMetadata->getReflectionProperty($idColumn)->getValue($entity);
         $descendantColumn = $treeMetadata->closureTree['descendant']['fieldName'];
 
+        // Get the IDs for the node and all of its children
+        $result = $entityManager->getRepository($nodeMetadata->name)
+            ->getChildHierarchyQueryBuilder($nodeId, true)
+            ->select('node.'. $idColumn)
+            ->getQuery()
+            ->getScalarResult();
+
+        // Get the list of IDs
+        $ids = array_map('current', $result);
+
         // Delete current tree
         $result = $entityManager->getRepository($treeClass)->createQueryBuilder('t')
             ->delete()
-            ->orWhere('t.'. $descendantColumn .' = ?1')
-            ->setParameter(1, $nodeId)
+            ->orWhere('t.'. $descendantColumn .' IN ('. implode(', ', $ids) .')')
             ->getQuery()
             ->execute();
     }

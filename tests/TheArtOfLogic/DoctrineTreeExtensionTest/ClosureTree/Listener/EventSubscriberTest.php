@@ -459,7 +459,8 @@ class EventSubscriberTest extends BaseEventSubscriberTest
         return array(
             'loadClassMetadata',
             'postPersist',
-            'preUpdate'
+            'preUpdate',
+            'preRemove'
         );
     }
 }

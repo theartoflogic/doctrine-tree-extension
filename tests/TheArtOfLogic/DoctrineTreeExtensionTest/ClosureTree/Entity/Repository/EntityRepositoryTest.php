@@ -41,7 +41,8 @@ class EntityRepository extends Base
         return array(
             'loadClassMetadata',
             'postPersist',
-            'preUpdate'
+            'preUpdate',
+            'preRemove'
         );
     }
 }
