@@ -154,9 +154,52 @@ class EntityRepository extends BaseEntityRepository
         return $queryBuilder;
     }
 
+    /**
+     * Find the child hierarchy for the specified parent node.
+     *
+     * @param integer $parentId
+     *
+     * @return array Returns the array of results.
+     */
     public function findChildHierarchy($parentId)
     {
         return $this->getChildHierarchyQueryBuilder($parentId)->getQuery()->getResult();
+    }
+
+    /**
+     * Get the query builder, pre-populated with the query
+     * conditions to select the hierarchy of parent nodes
+     * for the specified child node.
+     *
+     * @return object Returns an instance of the query builder.
+     */
+    public function getParentHierarchyQueryBuilder($childId = null, $withChild = false)
+    {
+        // Get class metadata
+        $metadata = $this->getClassMetadata();
+        $treeMetadata = $this->_em->getClassMetadata($metadata->closureTree['treeEntity']);
+
+        // Get the column names
+        $nodeIdColumn = $metadata->getSingleIdentifierColumnName();
+        $ancestorColumn = $treeMetadata->closureTree['ancestor']['fieldName'];
+        $descendantColumn = $treeMetadata->closureTree['descendant']['fieldName'];
+
+        // Create the query builder
+        $queryBuilder = $this->_em->createQueryBuilder();
+
+        $queryBuilder
+            ->select('node')
+            ->from($metadata->name, 'node')
+            ->innerJoin($treeMetadata->name, 'tree', 'WITH', 'node.'. $nodeIdColumn .' = tree.'. $ancestorColumn)
+            ->where('tree.'. $descendantColumn .' = :descendant')
+            ->setParameter('descendant', $childId);
+
+        // Check if we should exclude the child itself
+        if (!$withChild) {
+            $queryBuilder->andWhere('tree.'. $ancestorColumn .' != tree.'. $descendantColumn);
+        }
+
+        return $queryBuilder;
     }
 
     public function findParentHierarchy($childId)
