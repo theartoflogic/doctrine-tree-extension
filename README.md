@@ -8,9 +8,13 @@ This library contains an extension for Doctrine that makes it quick and easy to 
 
 ### Features
 
-**Note:** At this time Closure trees are the only supported method. I am actively developing support for other tree models and will release an updates as soon as they are ready.
+**Note:** At this time Closure trees are the only supported method. I am actively developing support for other tree models and will release an update as soon as they are ready.
 
 - **Closure Tree**: Easily manage the closure table, including the option to specify the depth of each node.
+
+### Upcoming Features
+
+- **Nested Set**: Easily manage the nested set data.
 
 ### Running the tests:
 
