@@ -11,3 +11,7 @@ matrix:
 
 before_script:
     - COMPOSER_ROOT_VERSION=dev-master composer --prefer-source --dev install
+
+notifications:
+    email:
+        - sarah@theartoflogic.com
