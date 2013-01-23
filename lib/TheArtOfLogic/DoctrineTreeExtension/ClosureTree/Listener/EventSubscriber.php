@@ -20,7 +20,7 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Descendant;
 use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation\Depth;
 
 /**
- * @author Sarah Ryan <sryan@phunware.com>
+ * @author Sarah Ryan <sarah@theartoflogic.com>
  */
 class EventSubscriber extends BaseEventSubscriber
 {

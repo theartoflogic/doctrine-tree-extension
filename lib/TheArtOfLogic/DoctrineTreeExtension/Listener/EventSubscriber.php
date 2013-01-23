@@ -11,7 +11,7 @@ use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 
 /**
- * @author Sarah Ryan <sryan@phunware.com>
+ * @author Sarah Ryan <sarah@theartoflogic.com>
  */
 abstract class EventSubscriber implements BaseEventSubscriber
 {

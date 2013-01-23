@@ -11,7 +11,26 @@ use TheArtOfLogic\DoctrineTreeExtension\ClosureTree\Annotation as ClosureTree;
  */
 abstract class AbstractTree
 {
+    /**
+     * The column used to reference the tree ancestor.
+     * 
+     * Note that this is not specified as an ORM column
+     * since that is handled by the Doctrine event listener
+     * itself (or optionally overriden by the sub-class).
+     *
+     * @var integer
+     */
     protected $ancestor;
+
+    /**
+     * The column used to reference the tree descendant.
+     * 
+     * Note that this is not specified as an ORM column
+     * since that is handled by the Doctrine event listener
+     * itself (or optionally overriden by the sub-class).
+     *
+     * @var integer
+     */
     protected $descendant;
 
     /**
