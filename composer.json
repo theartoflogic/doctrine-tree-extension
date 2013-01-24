@@ -8,7 +8,7 @@
         "behaviors",
         "extensions",
         "tree",
-        "nestedset",
+        "nested set",
         "closure"
     ],
     "license": "MIT",
@@ -27,6 +27,7 @@
         "symfony/config": "dev-master",
         "symfony/http-kernel": "dev-master"
     },
+    "minimum-stability": "dev",
     "autoload": {
         "psr-0": { "TheArtOfLogic\\DoctrineTreeExtension": "lib/" }
     }
